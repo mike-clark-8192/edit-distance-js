@@ -1,3 +1,6 @@
 {
-    "jest.jestCommandLine": "npm run test"
+    "jest.runMode": "watch",
+    // "jest.jestCommandLine": "npm run test",
+    // "jest.rootPath": "src",
+    // "jest.runMode": "watch"
 }

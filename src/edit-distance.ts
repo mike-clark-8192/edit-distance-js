@@ -1,10 +1,6 @@
 class Operator {
-    static eqeqeq(a: string, b: string): boolean {
-        return a === b;
-    }
-
     static eq(a: string, b: string): boolean {
-        return a == b;
+        return a === b;
     }
 }
 
@@ -33,7 +29,7 @@ class SequenceMatcher {
     private seq2: string[] | null;
     private test: (a: string, b: string) => boolean;
     private actionFunction: ActionFunction;
-    private opcodes: OpCode[];
+    private opcodes: OpCode[] | null;
     private dist: number | null;
     private matchesCount: number | null;
 
@@ -47,7 +43,7 @@ class SequenceMatcher {
         this.seq2 = b ?? [];
         this.test = test;
         this.actionFunction = actionFunction;
-        this.opcodes = [];
+        this.opcodes = null;
         this.dist = null;
         this.matchesCount = null;
         this.resetObject();
@@ -60,7 +56,7 @@ class SequenceMatcher {
     }
 
     private resetObject(): void {
-        this.opcodes = [];
+        this.opcodes = null;
         this.dist = null;
         this.matchesCount = null;
     }
@@ -77,6 +73,7 @@ class SequenceMatcher {
 
     getOpcodes(): any[] {
         if (!this.opcodes) {
+            this.opcodes = [];
             const [d, m, opcodes] = editDistanceBackpointer(this.seq1!, this.seq2!, this.actionFunction, this.test);
             if (this.dist !== null && d !== this.dist) throw new Error('Distance mismatch');
             if (this.matchesCount !== null && m !== this.matchesCount) throw new Error('Match count mismatch');
@@ -158,25 +155,26 @@ function lowestCostAction(
 }
 
 function highestMatchAction(
-    ic: number, dc: number, sc: number, im: number, dm: number, sm: number, cost: number
+    ic: number, dc: number, sc: number,
+    im: number, dm: number, sm: number,
+    cost: number
 ): OpCode {
     let bestAction: OpCode | null = null;
     let lowestCost: number = Infinity;
     const maxMatch = Math.max(im, dm, sm);
-
-    if (maxMatch === sm && cost === 0) {
-        bestAction = OpCode.EQUAL;
-        lowestCost = sm;
-    } else if (maxMatch === sm && cost === 1) {
-        bestAction = OpCode.REPLACE;
-        lowestCost = sm;
-    } else if (maxMatch === im && ic < lowestCost) {
-        bestAction = OpCode.INSERT;
-        lowestCost = ic;
-    } else if (maxMatch === dm && dc < lowestCost) {
-        bestAction = OpCode.DELETE;
-        lowestCost = dc;
-    } else {
+    const actions = [
+        { match: sm, cost: sc, action: cost === 0 ? OpCode.EQUAL : OpCode.REPLACE },
+        { match: im, cost: ic, action: OpCode.INSERT },
+        { match: dm, cost: dc, action: OpCode.DELETE }
+    ];
+    actions.sort((a, b) => a.cost - b.cost);
+    for (const { match, cost, action } of actions) {
+        if (match === maxMatch && cost < lowestCost) {
+            bestAction = action;
+            lowestCost = cost;
+        }
+    }
+    if (bestAction === null) {
         throw new Error("internal error: invalid highest match action");
     }
     return bestAction;
@@ -185,7 +183,7 @@ function highestMatchAction(
 function editDistance(
     seq1: string[], seq2: string[],
     actionFunction: ActionFunction = lowestCostAction,
-    test: EqualsFunction = Operator.eqeqeq
+    test: EqualsFunction = Operator.eq
 ): [number, number] {
     const m = seq1.length;
     const n = seq2.length;
@@ -234,7 +232,7 @@ function editDistance(
 function editDistanceBackpointer(
     seq1: string[], seq2: string[],
     actionFunction: ActionFunction = lowestCostAction,
-    test: EqualsFunction = Operator.eqeqeq
+    test: EqualsFunction = Operator.eq
 ): [number, number, any[]] {
     const m = seq1.length;
     const n = seq2.length;
@@ -244,6 +242,8 @@ function editDistanceBackpointer(
     const d1 = new Array(n + 1).fill(0);
     const m0 = new Array(n + 1).fill(0);
     const m1 = new Array(n + 1).fill(0);
+
+    //console.error(`Initial dist and matches arrays`, { d0, m0 });
 
     for (let i = 1; i <= n; i++) {
         d0[i] = i;
@@ -265,6 +265,8 @@ function editDistanceBackpointer(
 
             const action = actionFunction(insCost, delCost, subCost, insMatch, delMatch, subMatch, cost);
 
+            //console.error(`Processing cell [${i}][${j}]`, {seq1Char: seq1[i - 1], seq2Char: seq2[j - 1], actions: { insCost, delCost, subCost }, matches: { insMatch, delMatch, subMatch }, chosenAction: action});
+
             if (action === OpCode.EQUAL || action === OpCode.REPLACE) {
                 d1[j] = subCost;
                 m1[j] = subMatch;
@@ -282,11 +284,18 @@ function editDistanceBackpointer(
             }
         }
 
+        //console.error(`Updated dist and matches for row ${i}`, { d1: d1.slice(), m1: m1.slice() });
+
         d0.splice(0, d0.length, ...d1);
         m0.splice(0, m0.length, ...m1);
     }
 
+    //console.error(`Final distance array:`, d1);
+    //console.error(`Final matches array:`, m1);
+    //console.error(`Backpointer table:`, bp);
+
     const opcodes = getOpcodesFromBpTable(bp);
+    //console.error(`Generated opcodes:`, opcodes);
     return [d1[n], m1[n], opcodes];
 }
 
@@ -295,22 +304,33 @@ function getOpcodesFromBpTable(bp: (OpCode | null)[][]): any[] {
     let y = bp[0].length - 1;
     const opcodes: any[] = [];
 
+    //console.error(`Starting opcode generation from BP table. Starting coordinates: [${x}, ${y}]`);
+
     while (x !== 0 || y !== 0) {
         const thisBp = bp[x][y];
+        //console.error(`Processing BP cell at [${x}, ${y}] with action: ${thisBp}`);
+
         if (thisBp === OpCode.EQUAL || thisBp === OpCode.REPLACE) {
             opcodes.push([thisBp, Math.max(x - 1, 0), x, Math.max(y - 1, 0), y]);
+            //console.error(`Added opcode: [${thisBp}, ${Math.max(x - 1, 0)}, ${x}, ${Math.max(y - 1, 0)}, ${y}]`);
             x -= 1;
             y -= 1;
         } else if (thisBp === OpCode.INSERT) {
             opcodes.push([OpCode.INSERT, x, x, Math.max(y - 1, 0), y]);
+            //console.error(`Added opcode: [${OpCode.INSERT}, ${x}, ${x}, ${Math.max(y - 1, 0)}, ${y}]`);
             y -= 1;
         } else if (thisBp === OpCode.DELETE) {
-            opcodes.push([OpCode.DELETE, Math.max(x - 1, 0), x, y, y]);
+            opcodes.push([OpCode.DELETE, Math.max(x - 1, 0), x, Math.max(y - 1, 0), Math.max(y - 1, 0)]);
+            //console.error(`Added opcode: [${OpCode.DELETE}, ${Math.max(x - 1, 0)}, ${x}, ${Math.max(y - 1, 0)}, ${Math.max(y - 1, 0)}]`);
             x -= 1;
         } else {
+            //console.error("Encountered invalid action in BP table which is not handled.");
             throw new Error("Invalid dynamic programming action in BP table!");
         }
     }
+
+    //console.error(`Completed opcode generation. Final opcodes:`, opcodes);
+
     opcodes.reverse();
     return opcodes;
 }
