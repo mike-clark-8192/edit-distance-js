@@ -1,0 +1,38 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+
+    - name: Install dependencies with clean state
+      run: npm ci
+
+    - name: Build the package  # This step is optional, depending on your package
+      run: npm run build
+
+    - name: Check version match
+      run: |
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+        TAG_VERSION=${GITHUB_REF/refs\/tags\/v/}
+        if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+          echo "Version mismatch: package.json ($PACKAGE_VERSION) does not match the release tag ($TAG_VERSION)"
+          exit 1
+        fi
+
+    - name: Publish to npm
+      run: npm publish --provenance --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
