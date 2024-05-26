@@ -1,11 +1,7 @@
-import shelljs from "shelljs";
-import fs from "fs";
-import path from "path";
-import { createRequire } from "module";
-const Require = createRequire(import.meta.url);
-const packageJson = Require("./package.json");
-const __dirname = import.meta.dirname;
-const __filename = import.meta.url;
+const shelljs = require("shelljs");
+const fs = require("fs");
+const path = require("path");
+const packageJson = require("./package.json");
 
 if (process.env.EDITDISTANCEJS_NOPREPARE
     || process.env.npm_command !== "install"

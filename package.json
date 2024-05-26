@@ -21,7 +21,7 @@
     "build:prod": "cross-env NODE_ENV=production npm run build:build",
     "build:dev": "cross-env NODE_ENV=development npm run build:build",
     "build:build": "npm run clean && rollup -c",
-    "prepare": "node prepare.js",
+    "prepare": "node prepare.cjs",
     "test": "jest"
   },
   "keywords": [],
