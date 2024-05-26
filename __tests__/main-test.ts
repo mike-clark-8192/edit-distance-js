@@ -5,7 +5,7 @@ import {
   highestMatchAction,
   lowestCostAction,
   Operator,
-  OpCode,
+  Opcode,
 } from '../src/edit-distance'; // Adjust import path as needed
 
 describe('TestEditDistance', () => {
@@ -183,32 +183,32 @@ test('test_issue13', () => {
 describe('highestMatchAction Functionality', () => {
   test('should prefer substitution when substitution has the highest match and lowest cost', () => {
     const result = highestMatchAction(3, 3, 1, 0, 0, 2, 1); // Assuming substitution cost is 1 and match is 2
-    expect(result).toEqual(OpCode.REPLACE);
+    expect(result).toEqual(Opcode.REPLACE);
   });
 
   test('should prefer insertion when insertion has the highest match score despite higher cost', () => {
     const result = highestMatchAction(1, 3, 2, 3, 1, 1, 1); // Insertion cost is 1, match is 3
-    expect(result).toEqual(OpCode.INSERT);
+    expect(result).toEqual(Opcode.INSERT);
   });
 
   test('should prefer deletion when deletion has the highest match score and equal cost', () => {
     const result = highestMatchAction(2, 2, 3, 1, 2, 1, 1); // Deletion cost and substitution cost are equal, deletion match is highest
-    expect(result).toEqual(OpCode.DELETE);
+    expect(result).toEqual(Opcode.DELETE);
   });
 
   test('should select equal when substitution cost is zero and it matches perfectly', () => {
     const result = highestMatchAction(1, 1, 0, 0, 0, 5, 0); // No cost for substitution and high match score
-    expect(result).toEqual(OpCode.EQUAL);
+    expect(result).toEqual(Opcode.EQUAL);
   });
 
   test('should handle tie by choosing the operation with lower cost', () => {
     const result = highestMatchAction(1, 2, 1, 3, 3, 3, 1);
-    expect(result).toEqual(OpCode.REPLACE);
+    expect(result).toEqual(Opcode.REPLACE);
   });
 
   test('should handle tie in match and cost by choosing the first in order (insert, delete, replace)', () => {
     const result = highestMatchAction(2, 2, 2, 4, 4, 4, 1); // All options have same cost and match score
-    expect(result).toEqual(OpCode.REPLACE);
+    expect(result).toEqual(Opcode.REPLACE);
   });
 
   // Add more tests as needed to cover all logical branches and edge cases.
@@ -216,35 +216,35 @@ describe('highestMatchAction Functionality', () => {
 
 describe('lowestCostAction Functionality', () => {
   test('should return EQUAL when substitution cost is lowest and cost is zero', () => {
-    expect(lowestCostAction(2, 3, 1, 1, 1, 4, 0)).toEqual(OpCode.EQUAL);
+    expect(lowestCostAction(2, 3, 1, 1, 1, 4, 0)).toEqual(Opcode.EQUAL);
   });
 
   test('should return REPLACE when substitution cost is lowest and cost is one', () => {
-    expect(lowestCostAction(2, 3, 1, 1, 1, 4, 1)).toEqual(OpCode.REPLACE);
+    expect(lowestCostAction(2, 3, 1, 1, 1, 4, 1)).toEqual(Opcode.REPLACE);
   });
 
   test('should return INSERT when insertion has the lowest cost and highest match', () => {
-    expect(lowestCostAction(1, 3, 2, 5, 1, 1, 1)).toEqual(OpCode.INSERT);
+    expect(lowestCostAction(1, 3, 2, 5, 1, 1, 1)).toEqual(Opcode.INSERT);
   });
 
   test('should return DELETE when deletion has the lowest cost and highest match', () => {
-    expect(lowestCostAction(3, 1, 2, 1, 5, 1, 1)).toEqual(OpCode.DELETE);
+    expect(lowestCostAction(3, 1, 2, 1, 5, 1, 1)).toEqual(Opcode.DELETE);
   });
 
   test('should choose the operation with the lowest cost when match scores are equal', () => {
-    expect(lowestCostAction(1, 2, 3, 4, 4, 4, 1)).toEqual(OpCode.INSERT);
+    expect(lowestCostAction(1, 2, 3, 4, 4, 4, 1)).toEqual(Opcode.INSERT);
   });
 
   test('should prioritize lower cost even if match scores are high', () => {
-    expect(lowestCostAction(1, 2, 3, 6, 7, 8, 1)).toEqual(OpCode.INSERT);
+    expect(lowestCostAction(1, 2, 3, 6, 7, 8, 1)).toEqual(Opcode.INSERT);
   });
 
-  // this test should probably expect OpCode.DELETE because it has the lowest cost, however, the original Python code
+  // this test should probably expect Opcode.DELETE because it has the lowest cost, however, the original Python code
   // does not evaluate all scores concurrently (rather, it branches on the first condition that is met), so this test
   // is written to match the "as implemented" behavior
   test('should handle ties in cost by choosing the first valid match score criteria met', () => {
     // All costs are the same but different match scores
-    expect(lowestCostAction(2, 2, 2, 3, 5, 1, 1)).toEqual(OpCode.REPLACE);
+    expect(lowestCostAction(2, 2, 2, 3, 5, 1, 1)).toEqual(Opcode.REPLACE);
   });
 });
 
